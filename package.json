@@ -1,0 +1,27 @@
+{
+  "name": "ultron-discord-bot",
+  "version": "2.0.0",
+  "description": "Discord bot powered by OpenAI for intelligent conversation responses",
+  "main": "ultron.js",
+  "scripts": {
+    "start": "node ultron.js",
+    "dev": "node ultron.js"
+  },
+  "keywords": [
+    "discord",
+    "bot",
+    "openai",
+    "chatgpt",
+    "ai"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "discord.js": "^14.14.1",
+    "dotenv": "^16.4.5",
+    "openai": "^4.28.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
