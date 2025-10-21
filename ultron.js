@@ -167,7 +167,7 @@ const functions = [
 ];
 
 // Bot ready event
-client.on('ready', () => {
+client.on('clientReady', () => {
     console.log(`✅ Logged in as ${client.user.tag}`);
     console.log(`📝 Command prefix: ${CONFIG.commandPrefix || '(responds to all messages)'}`);
     console.log(`🤖 Using model: ${CONFIG.model}`);
