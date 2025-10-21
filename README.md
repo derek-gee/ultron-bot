@@ -5,8 +5,9 @@ A Discord bot powered by OpenAI's GPT models that provides intelligent, context-
 ## Features
 
 - 🤖 **Modern OpenAI Integration** - Uses OpenAI's latest chat completions API (v4.x)
+- 💰 **Real-Time Crypto Prices** - Get live cryptocurrency prices using OpenAI function calling
 - 💬 **Conversation Memory** - Maintains context across multiple messages per channel
-- ⚡ **Configurable Command Prefix** - Optionally respond only to messages with a specific prefix
+- ⚡ **Configurable Command Prefix** - Optionally respond only to messages with a specific prefix (default: backslash `\`)
 - 🎨 **Customizable Personality** - Define your bot's personality through system prompts
 - 🛡️ **Rate Limiting** - Built-in cooldown system to prevent spam
 - 📝 **Typing Indicators** - Shows typing status while generating responses
@@ -44,7 +45,7 @@ A Discord bot powered by OpenAI's GPT models that provides intelligent, context-
 4. **Configure bot settings (optional)**
    
    Customize the bot behavior in `.env`:
-   - `COMMAND_PREFIX` - Prefix for bot commands (e.g., `!ultron`). Leave empty to respond to all messages.
+   - `COMMAND_PREFIX` - Prefix for bot commands (default: `\`). Leave empty to respond to all messages.
    - `OPENAI_MODEL` - Model to use (default: `gpt-4o-mini`)
    - `MAX_TOKENS` - Maximum response length (default: `500`)
    - `SYSTEM_PROMPT` - Bot personality/instructions
@@ -74,18 +75,28 @@ A Discord bot powered by OpenAI's GPT models that provides intelligent, context-
 npm start
 ```
 
-**With command prefix (e.g., `!ultron`):**
+**With command prefix (default: backslash `\`):**
 ```
-!ultron What's the weather like today?
+\what's the price of BTC and ETH?
+\explain quantum computing
+\help me debug this code
 ```
 
-**Without command prefix:**
+**Without command prefix (set `COMMAND_PREFIX=` to empty):**
 ```
 Hey bot, can you help me with something?
 ```
 
+**Crypto price queries:**
+```
+\what are the current prices for BTC and ETH?
+\how much is Solana worth?
+\show me prices for BTC, ETH, SOL, and ADA
+```
+
 The bot will:
 - Show a typing indicator while processing
+- Fetch real-time crypto prices when asked
 - Remember the last 10 messages in each channel for context
 - Apply a 3-second cooldown per user to prevent spam
 - Provide helpful error messages if something goes wrong
@@ -96,7 +107,7 @@ The bot will:
 |----------|---------|-------------|
 | `BOT_TOKEN` | *Required* | Discord bot token |
 | `OPENAI_API_KEY` | *Required* | OpenAI API key |
-| `COMMAND_PREFIX` | `""` (empty) | Command prefix (empty = respond to all messages) |
+| `COMMAND_PREFIX` | `\` (backslash) | Command prefix (empty = respond to all messages) |
 | `OPENAI_MODEL` | `gpt-4o-mini` | OpenAI model to use |
 | `MAX_TOKENS` | `500` | Maximum tokens in response |
 | `SYSTEM_PROMPT` | Default personality | Instructions for bot behavior |
@@ -142,7 +153,34 @@ Feel free to submit issues, fork the repository, and create pull requests for an
 
 ISC
 
+## Supported Cryptocurrencies
+
+The bot can fetch real-time prices for:
+- **BTC** (Bitcoin)
+- **ETH** (Ethereum)
+- **SOL** (Solana)
+- **BNB** (Binance Coin)
+- **XRP** (Ripple)
+- **ADA** (Cardano)
+- **DOGE** (Dogecoin)
+- **DOT** (Polkadot)
+- **MATIC** (Polygon)
+- **AVAX** (Avalanche)
+- **LINK** (Chainlink)
+- **UNI** (Uniswap)
+- **ATOM** (Cosmos)
+- **LTC** (Litecoin)
+- And many more!
+
+Data is provided by the free [CoinGecko API](https://www.coingecko.com/en/api) - no API key required.
+
 ## Changelog
+
+### Version 2.1.0
+- ✅ **Added real-time cryptocurrency prices** via OpenAI function calling
+- ✅ Changed default command prefix to backslash (`\`)
+- ✅ Integrated CoinGecko API for crypto data
+- ✅ Added support for 15+ popular cryptocurrencies
 
 ### Version 2.0.0
 - ✅ Updated to OpenAI v4.x API

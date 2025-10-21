@@ -4,10 +4,10 @@ const OpenAI = require('openai');
 
 // Configuration
 const CONFIG = {
-    commandPrefix: process.env.COMMAND_PREFIX || '',
+    commandPrefix: process.env.COMMAND_PREFIX || '\\',
     model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
     maxTokens: parseInt(process.env.MAX_TOKENS) || 500,
-    systemPrompt: process.env.SYSTEM_PROMPT || 'You are Ultron, a helpful and friendly AI assistant in a Discord server. Be concise, engaging, and helpful in your responses.',
+    systemPrompt: process.env.SYSTEM_PROMPT || 'You are Ultron, a helpful and friendly AI assistant in a Discord server. Be concise, engaging, and helpful in your responses. You have access to real-time cryptocurrency price data.',
     contextMessages: parseInt(process.env.CONTEXT_MESSAGES) || 10,
     temperature: 0.7,
     cooldownSeconds: 3
@@ -81,6 +81,91 @@ function setCooldown(userId) {
     userCooldowns.set(userId, Date.now());
 }
 
+/**
+ * Fetch cryptocurrency prices from CoinGecko API
+ * @param {string[]} symbols - Array of crypto symbols (e.g., ['BTC', 'ETH'])
+ * @returns {Promise<Object>} Price data for requested cryptocurrencies
+ */
+async function getCryptoPrices(symbols) {
+    try {
+        // Map common symbols to CoinGecko IDs
+        const symbolMap = {
+            'BTC': 'bitcoin',
+            'ETH': 'ethereum',
+            'USDT': 'tether',
+            'BNB': 'binancecoin',
+            'SOL': 'solana',
+            'XRP': 'ripple',
+            'ADA': 'cardano',
+            'DOGE': 'dogecoin',
+            'DOT': 'polkadot',
+            'MATIC': 'matic-network',
+            'AVAX': 'avalanche-2',
+            'LINK': 'chainlink',
+            'UNI': 'uniswap',
+            'ATOM': 'cosmos',
+            'LTC': 'litecoin'
+        };
+
+        // Convert symbols to CoinGecko IDs
+        const ids = symbols.map(s => symbolMap[s.toUpperCase()] || s.toLowerCase()).join(',');
+        
+        const response = await fetch(
+            `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true&include_market_cap=true`,
+            {
+                headers: {
+                    'Accept': 'application/json'
+                }
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error(`CoinGecko API error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        // Format the response
+        const result = {};
+        symbols.forEach(symbol => {
+            const coinId = symbolMap[symbol.toUpperCase()] || symbol.toLowerCase();
+            if (data[coinId]) {
+                result[symbol.toUpperCase()] = {
+                    price: data[coinId].usd,
+                    change_24h: data[coinId].usd_24h_change,
+                    market_cap: data[coinId].usd_market_cap
+                };
+            }
+        });
+
+        return result;
+    } catch (error) {
+        console.error('Error fetching crypto prices:', error);
+        throw error;
+    }
+}
+
+// Define available functions for OpenAI
+const functions = [
+    {
+        name: 'get_crypto_prices',
+        description: 'Get current cryptocurrency prices in USD. Use this when users ask about crypto prices, values, or market data.',
+        parameters: {
+            type: 'object',
+            properties: {
+                symbols: {
+                    type: 'array',
+                    items: {
+                        type: 'string'
+                    },
+                    description: 'Array of cryptocurrency symbols (e.g., ["BTC", "ETH", "SOL"]). Common symbols: BTC, ETH, USDT, BNB, SOL, XRP, ADA, DOGE, DOT, MATIC, AVAX, LINK, UNI, ATOM, LTC'
+                }
+            },
+            required: ['symbols']
+        }
+    }
+];
+
 // Bot ready event
 client.on('ready', () => {
     console.log(`✅ Logged in as ${client.user.tag}`);
@@ -123,10 +208,12 @@ client.on("messageCreate", async function (message) {
             ...history
         ];
         
-        // Call OpenAI API with chat completions (v4.x)
-        const response = await openai.chat.completions.create({
+        // Call OpenAI API with chat completions and function calling
+        let response = await openai.chat.completions.create({
             model: CONFIG.model,
             messages: messages,
+            functions: functions,
+            function_call: 'auto',
             temperature: CONFIG.temperature,
             max_tokens: CONFIG.maxTokens,
             top_p: 1.0,
@@ -134,13 +221,47 @@ client.on("messageCreate", async function (message) {
             presence_penalty: 0.0,
         });
         
-        const assistantMessage = response.choices[0].message.content;
+        let assistantMessage = response.choices[0].message;
+        
+        // Check if the model wants to call a function
+        if (assistantMessage.function_call) {
+            const functionName = assistantMessage.function_call.name;
+            const functionArgs = JSON.parse(assistantMessage.function_call.arguments);
+            
+            console.log(`🔧 Function call: ${functionName} with args:`, functionArgs);
+            
+            // Execute the function
+            let functionResult;
+            if (functionName === 'get_crypto_prices') {
+                functionResult = await getCryptoPrices(functionArgs.symbols);
+            }
+            
+            // Add function call and result to messages
+            messages.push(assistantMessage);
+            messages.push({
+                role: 'function',
+                name: functionName,
+                content: JSON.stringify(functionResult)
+            });
+            
+            // Get final response from the model
+            response = await openai.chat.completions.create({
+                model: CONFIG.model,
+                messages: messages,
+                temperature: CONFIG.temperature,
+                max_tokens: CONFIG.maxTokens,
+            });
+            
+            assistantMessage = response.choices[0].message;
+        }
+        
+        const finalMessage = assistantMessage.content;
         
         // Add assistant response to history
-        addToHistory(message.channel.id, 'assistant', assistantMessage);
+        addToHistory(message.channel.id, 'assistant', finalMessage);
         
         // Reply to user
-        await message.reply(assistantMessage);
+        await message.reply(finalMessage);
         
         // Set cooldown
         setCooldown(message.author.id);
